@@ -1,0 +1,231 @@
+[library Boost.MPL.Graph (proposed)
+	[quickbook 1.3]
+	[authors [Woodhull, Gordon]]
+	[copyright 2008-2011 Gordon Woodhull]
+	[category template]
+	[id mpl_graph]
+	[dirname msm/mpl_graph]
+	[purpose
+		Compile-time graph metadata and algorithms.
+	]
+    [license
+        Distributed under the Boost Software License, Version 1.0.
+        (See accompanying file LICENSE_1_0.txt or copy at
+        [@http://www.boost.org/LICENSE_1_0.txt])
+    ]
+]
+
+[/
+ / Copyright (c) 2011 Gordon Woodhull
+ /
+ / Distributed under the Boost Software License, Version 1.0. (See accompanying
+ / file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+ /]
+
+[/ links]
+
+[def _BGLROOT_ http://www.boost.org/doc/libs/release/libs/graph/doc/]
+
+[def _BGL_
+	[@http://www.boost.org/doc/libs/release/libs/graph/doc/ BGL]]
+[def _BGL_concepts_
+	[@http://www.boost.org/doc/libs/release/libs/graph/doc/graph_concepts.html graph concepts]]
+
+[def _MSM_
+	[@http://www.boost.org/doc/libs/1_45_0/libs/msm/doc/HTML/index.html MSM]]
+
+
+[section Introduction]
+
+MPL.Graph is a proposed Boost library for creating and traversing metadata graphs at compile time.
+
+So far, MPL.Graph provides compile-time versions of BGL's incidence_list and adjacency_list, and the algorithms breadth_first_search and depth_first_search.
+
+It is used in _MSM_ (where it is currently a sub-library) for identifying regions (connected components) and unreachable states.
+
+
+[section Why use MPL.Graph?]
+
+As with all metaprogramming libraries, there is a small hurdle in understanding what the library is for in the first place.
+
+Graph data structures and algorithms are applicable at compile time for a variety of purposes.  In many domains, the graph structure is known at compile-time and there is no need to waste runtime cycles on abstractions.  Compile-time graphs can also make it possible to implement patterns which would be too complex and error-prone in an ad-hoc manner.
+
+Some examples of familiar compile-time graphs:
+			
+* Class hierarchies form a [@http://en.wikipedia.org/wiki/Directed_acyclic_graph DAG]
+* State machines, e.g. from MSM
+* Expression trees e.g. from Proto expression templates
+* Grammars.  Note that Spirit grammar is usually known at compile-time, but Spirit uses runtime variables to merge trees by common rule references. 
+* Configuration of pluggable components or data flow
+
+Some constructs have graph structure that is partly compile-time and partly run-time:
+
+* Call graphs - the set of all possible calls between functions is (usually) a static graph, but a particular run is a tree.
+* Ownership of objects - the relationships type-owns-type form a static graph which describes the actual ownership of objects by objects in a runtime graph or tree.
+* Pointers between objects - the relationships type-holds-pointer-to-type form a static graph which describes the pattern of the runtime graph of objects pointing to each other.
+
+Metaprogramming these constructs allows analysis with graph algorithms, and producing code from computed graphs.  
+
+[endsect]
+
+[endsect]
+
+
+[section Data Structures]
+
+MPL.Graph metadata structures model the [link mpl_graph.concepts.graph_concepts graph concepts] of a compile-time abstract data type.  The concepts are a simple mapping of the _BGL_ _BGL_concepts_ into metaprogramming.
+
+Currently MPL.Graph supports the incidence list and adjacency list formats for specifying graph data.  Undirected graphs are not yet supported, nor is prohibition of parallel edges.
+			
+Both classes implement all of the [link mpl_graph.concepts.graph_concepts graph concepts] and use lazy evaluation to construct the most efficient metadata structure to fulfill each concept when it is used.  For example, if out_edges of IncidenceGraph is used at all, then an efficient metadata structure for looking up all out edges in the graph is created.  Likewise MPL.Graph does not create metadata for the implementation of BidirectionalGraph's in_edges until in_edges is called.
+
+The classes have approximately the same efficiency, since for each feature the entire graph is read sequentially and the appropriate sequences and maps (and maps of maps) are generated to implement the feature.  Thus (in theory - performance profiling yet to be performed) most features cost O(E) or O(N) while the individual uses of the feature are O(1).
+			
+The rationale is that if a metafunction is called for one vertex or edge, it will eventually be called for all vertices or edges.  Because you pay for what you use, there is less need to choose the appropriate implementation than there is when working with runtime graph data.  (However, one could also imagine other implementations that do less pre-processing, for example not building maps but just answering each query with a linear search, if there are going to be very few queries of that type.)
+
+Edge types must be unique 
+
+[section incidence_list]
+
+The incidence_list template class allows specifying a graph as an MPL sequence of Edge, Source, Target types.
+
+[endsect]
+
+[section adjacency_list] 
+
+The adjacency_list template allows specifying a graph as a sequence of vertices, each with its adjacent edges and vertices.
+
+[endsect]
+
+[endsect]
+
+[section Algorithms]
+
+The algos are 
+
+[section depth_first_search]
+
+[endsect]
+
+[section breadth_first_search]
+
+[endsect]
+
+[endsect] [/Algorithms]
+
+
+[section Concepts]
+
+The MPL.Graph concepts are based on the _BGL_ _BGL_concepts_, with a few major differences:
+
+# They operate on types, not objects.
+# There is no notion of a "type" of metadata - everything is [@http://en.wikipedia.org/wiki/Duck_typing duck-typed] - so there is no need for `vertex_descriptor` etc.
+# Metafunctions return types instead of descriptors, and type sequences instead of pairs of iterators.
+
+The MPL.Graph concepts are named after their BGL analogues, with a prefix "CT" for "compile-time".
+
+[section Graph Concepts]
+
+Currently only the non-mutable graph concepts are supported.  (Mutable graph concepts would have to return new graphs, perhaps lazily constructed.)
+
+AdjacencyMatrix is not supported.  (The concept could be implemented for non-parallel-edge graphs.  It might be worthwhile to implement a matrix graph for dense graphs.)
+
+[section CTGraph]
+
+This concept does not yet exist.  It will include the directed/undirected and allow parallel flags when those are supported.
+
+[endsect]
+
+[section CTIncidenceGraph]
+
+refines CTGraph
+
+[table
+	[[expression] [returns]]
+	[[``source<Edge,Graph>::type``] [The source vertex of this edge]]
+	[[``target<Edge,Graph>::type``] [The target vertex of this edge]]
+	[[``out_edges<Vertex,Graph>::type``] [Sequence of edges leaving this vertex]]
+	[[``out_degree<Vertex,Graph>::type``] [The number of out-edges]]
+]
+
+[endsect]
+
+[section CTBidirectionalGraph]
+
+refines CTIncidenceGraph
+
+[table
+	[[expression] [returns]]
+	[[``in_edges<Vertex,Graph>::type``] [Sequence of edges arriving at this vertex]]
+	[[``in_degree<Vertex,Graph>::type``] [Number of edges arriving at this vertex]]
+	[[``degree<Vertex,Graph>::type``] [Total number of in- and out-edges]]
+]
+
+[endsect]
+
+[section CTAdjacencyGraph]
+
+refines CTGraph
+
+[table
+	[[expression] [returns]]
+	[[``adjacent_vertices<Vertex,Graph>::type``] [Sequence of vertices reached by out-edges from this vertex]]
+]
+
+[endsect]
+
+[section CTVertexListGraph]
+
+refines CTGraph
+
+[table
+	[[expression] [returns]]
+	[[``vertices<Graph>::type``] [Sequence of all vertices in the graph]]
+	[[``num_vertices<Graph>::type``] [Number of vertices in the graph]]
+]
+
+[endsect]
+
+[section CTEdgeListGraph]
+
+refines CTGraph
+
+[table
+	[[expression] [returns]]
+	[[``edges<Graph>::type``] [Sequence of all edges in the graph]]
+	[[``num_edges<Graph>::type``] [Number of edges in the graph]]
+]
+
+[endsect]
+
+[endsect] [/Graph Concepts]
+
+
+[section Visitor Concepts]
+
+The DFS and BFS Visitor concepts 
+
+[endsect] [/Visitor Concepts]
+
+[endsect] [/Concepts]
+
+
+[section Acknowledgements]
+
+MPL.Graph is the foundation for a much larger idea called the [@http://gordon.woodhull.com/metagraph Metagraph].  My gratitude goes out to everyone who's helped that along.
+
+My parents have always encouraged my love for abstractions and believe in me even when they don't know what I'm talking about (or don't agree).
+
+Stephen North encouraged me to work on nested layout of graphs and my own templated graph data structure more than a decade ago.  That and syncing detailed "model graphs" with "layout graphs" led to metagraphs. 
+
+Jason Eisner discovered many new graph drawing features which need metagraphs.
+
+Doug Gregor cheered the first iteration of MPL.Graph, and at the first BoostCon '07, was the first person who understood what a metagraph is. 
+
+Christophe Henry is graciously hosting MPL.Graph as a sublibrary of Meta State Machine until it gets reviewed.  His shout-outs at BoostCon '10 led to the decision to release of MPL.Graph as its own library.
+
+Thanks to Luke Simonson for the name mpl::graph, and to Aleksey Gurtovoy for approving of it.
+
+Many, many more thanks - which will have to wait until later - !
+
+[endsect]

@@ -1,0 +1,6 @@
+import template-profile ;
+template-profile prof-dfs
+     : depth_first_search.cpp
+     : <include>/Users/gordon/src/boost-trunk
+     ;
+use-project /boost : /Users/gordon/src/boost-trunk ;
